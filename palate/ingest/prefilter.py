@@ -1,10 +1,51 @@
-"""Stage-1 runner. OWNER A. See docs/trd-a-ingest.md step 6."""
+"""Deterministic Stage-1 filtering of raw messages."""
+
+from palate import db
+
+from .vendors import classify
 
 
 def run(limit: int | None = None) -> dict[str, int]:
-    """Classify unclassified raw_message rows. Returns {vendor: count}.
+    """Classify raw Gmail messages and set matched_vendor.
 
-    Unmatched messages are DROPPED, not queued. Sending them to the model to
-    'see what happens' is how the $20 Gateway credit disappears.
+    Unmatched messages remain NULL and will not be sent to the LLM.
+    Returns counts by matched vendor.
     """
-    raise NotImplementedError
+    sql = """
+        SELECT id, sender, subject
+        FROM raw_message
+        WHERE source = 'gmail'
+          AND extracted = 0
+        ORDER BY fetched_at
+    """
+
+    params = ()
+
+    if limit is not None:
+        sql += " LIMIT ?"
+        params = (limit,)
+
+    with db.connect() as conn:
+        rows = conn.execute(sql, params).fetchall()
+
+        counts: dict[str, int] = {}
+
+        for row in rows:
+            vendor = classify(
+                row["sender"] or "",
+                row["subject"] or "",
+            )
+
+            conn.execute(
+                """
+                UPDATE raw_message
+                SET matched_vendor = ?
+                WHERE id = ?
+                """,
+                (vendor, row["id"]),
+            )
+
+            if vendor is not None:
+                counts[vendor] = counts.get(vendor, 0) + 1
+
+    return counts
