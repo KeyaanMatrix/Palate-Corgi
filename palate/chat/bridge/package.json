@@ -1,0 +1,8 @@
+{
+  "name": "palate-photon-bridge",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "spectrum-ts": "^12.4.0"
+  }
+}
