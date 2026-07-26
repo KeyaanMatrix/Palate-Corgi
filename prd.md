@@ -4,9 +4,32 @@
 
 **One line:** TripAdvisor tells you what strangers liked. This knows what *you* liked.
 
-**Status:** Hackathon build spec — 12hr event, ~10hr remaining at time of writing
-**Revision:** v2 — corrects the data-source architecture. v1 assumed Merge brokered Gmail/Calendar. It does not.
-**Stack partners in play:** Google APIs (primary corpus), Merge (File Storage + Knowledge Base enrichment), Photon (iMessage interface), Anthropic API (extraction + generation), Google Places (resolution)
+**Status:** Hackathon build spec — Corgi × Merge × Photon, 12hr overnight, 1000+ RSVPs
+**Revision:** v3 — rebases the plan on the event's actual schedule and prize structure, and moves Merge onto the critical path via Gateway (LLM routing) rather than treating it as an enrichment side-track. v2 corrected the data-source architecture; v1 wrongly assumed Merge brokered Gmail/Calendar.
+**Stack partners in play:** Google APIs (primary corpus), **Merge Gateway** (LLM routing — every model call), Merge (File Storage + Knowledge Base enrichment), Photon (iMessage interface), Google Places (resolution), Vercel (submission artifact)
+
+---
+
+## 0. Event constraints
+
+Non-negotiables from the kickoff, because several of them change the plan:
+
+| Constraint | Consequence |
+|---|---|
+| Build window **7:30 PM → 6:00 AM** (doors 6:00, presentation to 7:30) | ~10.5 hours of build, minus a 1:00–2:00 AM dinner break → **~9.5 hours of real work** |
+| **6:00 AM hard stop — submit to be judged** | The submission artifact is the primary judged object. Judges review submissions *before* anyone demos |
+| **Top 5 only demo, 7:30 AM.** Prizes 8:00 AM | You may never get a live demo. The submission must carry the thesis on its own |
+| Teams of **3–4** | Build plan below is written for 4 with an explicit 3-person collapse |
+| Everyone must be in **Startup School** | Verify for all members before 7:30 PM. Trivially fixable now, disqualifying later |
+| Wifi: CORGI Guest / `woofwoof2024` | Assume it degrades at 2 AM with 1000 people on it. Cache aggressively; never let a demo path require a cold network round trip |
+
+**Credits available — claim all three in the first 15 minutes, before the sign-up flows get congested:**
+
+- **Merge Gateway — $20** ($10 on signup + $10 with code `CORGI-CAFE`). Plus **Merge Agent Handler**, generous free tier.
+- **Photon Pro — $25**, code `Hackwithphoton`. Sign in at `app.photon.codes/sign-in`, create project, apply the code on the billings page.
+- **Vercel — $30**, code `V0-CORGIMERGE30`. Expires 1 month after redemption.
+
+**Judging bar, stated explicitly by the organizers:** *build something you'd be proud to show a room of YC Partners*, and *make it feel human — use AI to make something that expresses, not just executes.* The Taste Profile (§3.1) is the direct answer to the second one. It is the reason to build this rather than another workflow-wiring demo, and it should be the first thing a judge sees in the submission.
 
 ---
 
@@ -84,11 +107,16 @@ The itinerary is used *while traveling*, on a phone, and the day falls apart con
 
 ### 5.1 Correction: what Merge actually is
 
-Merge is a B2B unified API. Its categories are HRIS, ATS, CRM, Accounting, Ticketing, File Storage, Knowledge Base, and Chat. **There is no email category and no calendar category.** It also does not provide camera roll photos or iMessage history.
+Merge positions itself as **the connectivity layer for AI**: connect your product or agents to external systems *and route to LLM models*, with auth, security, and observability built in. Three surfaces matter tonight, and they are not the same product:
+
+1. **Merge Gateway** — LLM routing. Point model calls at Merge instead of directly at a provider. **This is the piece that belongs on the critical path**, and $20 of credit covers this workload comfortably.
+2. **Merge Agent Handler** — an MCP endpoint that connects an agent to 200+ systems. Free tier.
+3. **Merge Unified API** — the classic categories: HRIS, ATS, CRM, Accounting, Ticketing, File Storage, Knowledge Base, Chat. **There is no email category and no calendar category.** It does not provide camera roll photos or iMessage history.
 
 Consequences:
 - The reservation-confirmation corpus comes from **Gmail API directly** (`gmail.readonly`), not Merge. Google OAuth is a well-trodden 30-minute path. Calendar likewise via **Google Calendar API**.
-- Merge's role is real but **enrichment, not critical path** — see 5.2. Do not put Merge on the hour-0 critical path, and do not let the Merge prize argument drive the architecture into something that doesn't work.
+- **Every LLM call — Stage 2 extraction, profile copy, stop rationales — routes through Merge Gateway.** This is a config-level change, not an architectural one, and it makes the Merge story true on the critical path rather than a bolt-on: the extraction pipeline literally does not run without it. Keep a direct-provider env flag as a one-line fallback if the Gateway misbehaves at 3 AM.
+- Merge's *Unified API* role remains **enrichment, not critical path** — see 5.2. Do not let the Unified API prize argument drive the data architecture into something that doesn't work.
 
 ### 5.2 Sources and honest assessment
 
@@ -96,10 +124,11 @@ Consequences:
 |---|---|---|---|
 | Gmail | Google API direct | Reservation confirms, **cancellations**, ticket purchases, hotel/flight receipts | **Critical — this is the product** |
 | Calendar | Google API direct | Pace, gaps, trip date ranges, deletions | High |
-| File Storage (Drive/Dropbox/Box) | **Merge** | Photo EXIF: timestamp + geotag → places visited with no booking trail | Medium |
+| File Storage (Drive/Dropbox/Box) | **Merge Unified API** | Photo EXIF: timestamp + geotag → places visited with no booking trail | Medium |
 | Knowledge Base (Notion) | **Merge** | Saved restaurant lists, trip notes — *declared* taste, to contrast against revealed | Medium, high demo value |
 | Chat (Teams) | **Merge** | Place recommendations exchanged in messages | Low, skip tonight |
-| HRIS / ATS / CRM / Accounting | Merge | Irrelevant here | Skip |
+| HRIS / ATS / CRM / Accounting | Merge Unified API | Irrelevant here | Skip |
+| **All model calls** | **Merge Gateway** | Not a data source — the routing layer for extraction and generation | **Critical path** |
 
 The Notion angle is worth more than its build cost: a saved list of aspirational restaurants the user never actually went to is the cleanest possible demonstration of declared-vs-revealed preference. *You saved 14 places to this list. You went to two. Here's what your list says about who you think you are, and what your calendar says about who you are.* That is the most human line available in this dataset and it exists only because Merge is in the stack.
 
@@ -153,7 +182,7 @@ taste_profile
 Two-stage. The split matters for both cost and reliability:
 
 - **Stage 1 — deterministic pre-filter.** Match sender domains and subject patterns for the top ~15 booking vendors. Cheap, fast, cuts LLM call volume by an order of magnitude. Anything unmatched is dropped rather than sent to the model — recall is not the constraint tonight, precision is.
-- **Stage 2 — LLM structured extraction.** Batch matched messages, extract to the `visit` schema with strict JSON output, one call per ~20 messages. Discard rows failing schema validation rather than repairing them.
+- **Stage 2 — LLM structured extraction, routed through Merge Gateway.** Batch matched messages, extract to the `visit` schema with strict JSON output, one call per ~20 messages. Discard rows failing schema validation rather than repairing them. Batch size is also the cost control on the $20 Gateway credit — check spend before kicking off the full backfill.
 
 **Profile computation is pure SQL/pandas over the visit table. No model involvement.** The model's only jobs are extraction (Stage 2) and prose generation (profile copy, stop rationales). Every number in the profile must trace to a row count, because the one thing that kills this demo is a profile line the presenter knows is wrong.
 
@@ -166,7 +195,7 @@ Google Places text search on `place_name_raw + city` for candidate discovery in 
 ## 6. Architecture
 
 ```
-Google APIs (Gmail, Calendar)        Merge (File Storage, Knowledge Base)
+Google APIs (Gmail, Calendar)        Merge Unified API (File Storage, Knowledge Base)
         │ OAuth + sync                        │ Merge Link + sync
         ▼                                     ▼
    raw_message store              EXIF extract  /  Notion list parse
@@ -176,7 +205,7 @@ Google APIs (Gmail, Calendar)        Merge (File Storage, Knowledge Base)
         │                                     │
         ▼                                     │
  LLM batch extraction ──────► visit table ◄───┘
-                              (SQLite)
+   via MERGE GATEWAY          (SQLite)
                                    │
                                    ▼
                     profile computation (deterministic)
@@ -184,38 +213,74 @@ Google APIs (Gmail, Calendar)        Merge (File Storage, Knowledge Base)
           ┌────────────────────────┼────────────────────────┐
           ▼                        ▼                        ▼
    profile copy gen        candidate retrieval      itinerary assembly
-        (LLM)              (Google Places)        (constraints + rationale)
+   via MERGE GATEWAY        (Google Places)        (constraints + rationale)
           │                                                 │
           └──────────────► Photon / iMessage ◄──────────────┘
                           (tapback handlers, re-plan)
+                                   │
+                                   ▼
+                       Vercel — static profile page
+                        (submission artifact only)
 ```
 
 Single service, SQLite is fine, no queue, no auth system, no accounts. Session state keyed by phone number.
 
+All model traffic goes through **Merge Gateway** behind a single client wrapper with a direct-provider fallback flag. One file, swappable in thirty seconds if the Gateway is the thing that breaks.
+
+The **Vercel** deployment is not a product surface — it is a permalink for the 6:00 AM submission (§8.1): the profile, the itinerary, and a 60-second video, in one page a judge can open without a phone in front of them. Static export, no backend, built in the freeze window.
+
 ---
 
-## 7. Build plan — 10 hours, 4 people
+## 7. Build plan — wall clock, 4 people
 
-Front-load the only real risk: **Gmail OAuth + sync + extraction working end to end on one real inbox.** Everything else is recoverable; that is not. Merge runs as a parallel track owned by one person who is not on the critical path.
+Front-load the only real risk: **Gmail OAuth + sync + extraction working end to end on one real inbox.** Everything else is recoverable; that is not. The Merge *Unified API* track runs in parallel, owned by one person off the critical path. Merge *Gateway* is critical path but is thirty minutes of work, done at the start.
 
-| Hour | Owner A — Data | Owner B — Profile | Owner C — Photon | Owner D — Merge + generation |
+Times are actual clock times, not elapsed hours. The 1:00–2:00 AM dinner break is real — plan around it rather than through it, and use it to sanity-check profile numbers out loud with someone who is not the person who wrote the query.
+
+| Clock | Owner A — Data | Owner B — Profile | Owner C — Photon | Owner D — Merge + generation |
 |---|---|---|---|---|
-| 0–2 | Google OAuth, Gmail sync, raw store landing | Vendor pattern list, schema + SQLite migrations | Photon hello-world, inbound/outbound, tapback events | **Verify Merge personal-account support**, then Link flow + Places wrapper |
-| 2–4 | Pre-filter + LLM extraction → visit rows | Profile metrics on seed data | One-stop-per-message formatting | Drive EXIF → visit rows; Notion list → intent_only rows |
-| 4–6 | **Gate: real inbox → real visit rows** | Distaste metrics (cancellations, one-and-done) | Tapback → swap handler | Aspiration-gap computation; profile copy prompt |
-| 6–8 | Backfill full history, dedupe repeats | Profile v2 on real data, sanity-check every number | Re-plan on text state | Itinerary assembly: constraint filter then rationale gen |
-| 8–9 | Freeze | Freeze | Fallback thread pre-loaded | Demo script, rehearse twice |
-| 9–10 | Buffer / bugfix only | | | |
+| **6:00–7:30 PM** (before build) | Everyone: claim all three credits, confirm Startup School membership, Google Cloud project + OAuth consent screen in test-user mode, pick the presenter inbox | | | |
+| 7:30–9:30 PM | Google OAuth, Gmail sync, raw store landing | Vendor pattern list, schema + SQLite migrations | Photon hello-world, inbound/outbound, tapback events | Merge Gateway wired + smoke-tested; **verify Merge personal-account support**; Places wrapper |
+| 9:30–11:30 PM | Pre-filter + LLM extraction → visit rows | Profile metrics on seed data | One-stop-per-message formatting | Merge Link flow; Drive EXIF → visit rows; Notion list → intent_only rows |
+| 11:30 PM–1:00 AM | **Gate: real inbox → real visit rows** | Distaste metrics (cancellations, one-and-done) | Tapback → swap handler | Aspiration-gap computation; profile copy prompt |
+| **1:00–2:00 AM** | Dinner. Read the profile aloud to the table — every line that sounds wrong is a bug you would otherwise ship | | | |
+| 2:00–4:00 AM | Backfill full history, dedupe repeats | Profile v2 on real data, sanity-check every number | Re-plan on text state | Itinerary assembly: constraint filter then rationale gen |
+| **4:00 AM — FREEZE** | Freeze | Freeze | Fallback thread pre-loaded and run end to end | Freeze |
+| 4:00–5:30 AM | Bugfix only | Record the 60s video | Vercel submission page | Write submission copy |
+| 5:30–6:00 AM | **Submit.** Buffer for submission-form friction only | | | |
+| 6:00–7:30 AM | Sleep in shifts. One person stays awake owning the demo phone | | | |
+| 7:30 AM | Demo if top 5 | | | |
+
+**Three people instead of four:** cut the Merge Unified API track entirely — Gateway stays (it is on the critical path and nearly free to wire), EXIF and Notion go. Owner D's generation work moves to Owner B. The aspiration-gap line in §3.1 and §8 is the casualty; the demo still stands without it.
 
 **Hard gates:**
-- **Hour 0:20** — Merge personal-account question answered. If negative, Owner D drops the Merge track to EXIF-only and moves to generation.
-- **Hour 4** — real inbox produces real visit rows. If not, switch to seeded data immediately and stop trying to fix live sync.
-- **Hour 8** — feature freeze, no exceptions. Remaining time is rehearsal and bugfix.
-- **Hour 9** — fully pre-loaded fallback thread on a phone that has already run the whole flow successfully.
+- **7:50 PM** — Merge personal-account question answered. If negative, Owner D drops the Unified API track to EXIF-only, or entirely, and moves to generation.
+- **8:00 PM** — Merge Gateway confirmed serving live model calls, or the direct-provider flag flips and the Gateway becomes a post-freeze retry.
+- **1:00 AM** — real inbox produces real visit rows. If not, switch to seeded data immediately and stop trying to fix live sync. This is a decision, not a discussion.
+- **4:00 AM — feature freeze, no exceptions.** Two hours to submission is not slack; it is the time it takes to record, write, deploy, and submit while exhausted.
+- **6:00 AM — submitted.** A perfect unsubmitted build scores zero.
+- **7:15 AM** — demo phone charged, fallback thread loaded, presenter has run the flow once cold since waking up.
 
 ---
 
-## 8. Demo script (3 min)
+## 8. Submission and demo
+
+Two distinct deliverables. Judges see the first; only the top 5 get to give the second. Weight effort accordingly — **the submission is the qualifying round.**
+
+### 8.1 The 6:00 AM submission
+
+Assume it is read at speed, on a laptop, by someone who has been awake all night and has dozens of these to get through. It must land the thesis in the first fifteen seconds without a phone in hand.
+
+- **One-liner, verbatim at the top:** *TripAdvisor tells you what strangers liked. This knows what you liked.*
+- **The Taste Profile, shown as output, not described.** Six real lines off a real inbox, counts included. This is the artifact that answers "make it feel human" — lead with it, above any architecture diagram.
+- **60-second screen recording:** profile appears → judge-picked city → itinerary lands in iMessage → tapback swaps one stop → "it's raining" re-plans the afternoon. No narration of features; just the thing working.
+- **Vercel page** hosting the above, one link.
+- **Three technical claims, one line each:** revealed-taste extraction from transactional history; distaste modeling (cancellations, one-and-done, saved-never-visited) which no recommender does; every model call routed through Merge Gateway.
+- **What is real vs. seeded,** stated plainly. Judges at a Merge/Photon event will find the seam anyway, and volunteering it buys more credibility than it costs.
+
+### 8.2 Live demo (3 min, top 5 only)
+
+Runs at 7:30 AM after a night with no sleep. Every step below must survive being executed badly.
 
 1. **Hook, spoken:** "Every travel app tells you what strangers liked. Watch this tell me what I liked, from data I never gave it on purpose."
 2. **Connect** — live OAuth on the presenter's own accounts. Pre-warmed, so the profile appears in seconds.
@@ -242,21 +307,30 @@ Front-load the only real risk: **Gmail OAuth + sync + extraction working end to 
 | Live sync stalls on stage | High | Pre-loaded fallback thread, phone in hand, already run end to end |
 | Agent drifts into generic chatbot | Medium | Hard scope: tapbacks + re-plan only. No open Q&A |
 | Trust objection: "you read my whole inbox" | Medium | Real answer: sender-scoped extraction, extract-then-discard, no raw message retention |
+| **Build slips past 6:00 AM and never gets submitted** | **Critical** | 4:00 AM freeze is the mitigation. It only works if it is treated as real at 3:45 AM |
+| Venue wifi degrades overnight with 1000 people on it | High | Cache Places results and the last-good itinerary locally; no demo path may require a cold network call |
+| Demo at 7:30 AM after zero sleep | High | One person owns the phone and sleeps in shifts 6:00–7:15; presenter runs the flow once cold before going on |
+| Merge Gateway rate-limits or errors mid-build | Medium | One-line env flag to direct provider; wrapper isolated to a single file |
+| $20 Gateway credit exhausted by extraction volume | Medium | Batch ~20 messages per call, cap backfill window, monitor spend at 11:30 PM before the full backfill |
 
 ---
 
 ## 10. Out of scope tonight
 
-Accounts, settings, web UI, companion/multi-user threads, bookings or payments, flights, budget optimization, maps rendering, Chat category, any Merge category outside File Storage and Knowledge Base.
+Accounts, settings, interactive web UI, companion/multi-user threads, bookings or payments, flights, budget optimization, maps rendering, Chat category, any Merge Unified API category outside File Storage and Knowledge Base.
+
+The Vercel page is the one exception and is not a product surface: static, read-only, built after freeze, exists solely so the submission is a link (§8.1).
 
 ---
 
 ## 11. Prize alignment
 
-- **Overall best:** real product thesis, working pipeline, defensible technical claim (revealed-taste extraction + distaste modeling), demo where the artifact appears live.
-- **Merge-specific:** File Storage EXIF adds visits with no booking trail; Knowledge Base produces the declared-vs-revealed contrast that is the single best line in the demo. Be honest on stage that Gmail is direct — claiming Merge does email in front of Merge engineers is the one unrecoverable mistake available tonight.
-- **Photon:** tapback-as-control-surface and mid-trip re-plan are iMessage-native, not a chat wrapper — the interface is load-bearing.
-- **"Make it feel human":** the output is an act of noticing. It tells you something true about yourself you never told it, then acts on it with restraint.
+Four things are actually on the table. The build is aimed at the first three; the fourth is the theme all of them are judged against.
+
+- **Overall Best Project** *(AirPods Max ×4 + merch; 2nd: $100 in gift cards + merch; 3rd: Corgi/Merge/Vercel merch)* — real product thesis, working pipeline, defensible technical claim (revealed-taste extraction + distaste modeling), and an artifact that appears live rather than being described.
+- **Merge Specific Prize** *(Plaude Note Taker per team member)* — the strongest possible version of this claim: **every model call in the pipeline routes through Merge Gateway**, so the product does not run without Merge. On top of that, File Storage EXIF adds visits with no booking trail, and Knowledge Base produces the declared-vs-revealed contrast that is the single best line in the demo. Be honest that Gmail is direct — claiming Merge does email in front of Merge engineers is the one unrecoverable mistake available tonight.
+- **Photon Prize** *(Best Photon Interfaces ×2 — 1 month Photon Business line, ~$500 value)* — the stated ask is "bring your agent to iMessage using Photon," and the differentiator is that the interface is **load-bearing, not a wrapper**: tapback-as-control-surface and mid-trip re-plan only make sense in a messaging thread. Say why iMessage beats a web app here — the day falls apart while you are walking around a foreign city with one hand free — rather than claiming novelty.
+- **"Make it feel human"** — the organizers' framing is *express, don't just execute*. This is the whole reason the Taste Profile ships before the itinerary. The output is an act of noticing: it tells you something true about yourself you never told it, then acts on it with restraint. A workflow that wires four APIs together does not clear this bar; a paragraph that makes someone say "how did it know that" does.
 
 ---
 
