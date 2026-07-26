@@ -9,3 +9,6 @@ client_secret.json
 .google_token.json
 submission/
 .DS_Store
+node_modules/
+.vercel/
+node_modules/
