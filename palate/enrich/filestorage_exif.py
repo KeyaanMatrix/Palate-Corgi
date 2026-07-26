@@ -19,11 +19,13 @@ _IMAGE_PREFIX = "image/"
 
 
 def _headers() -> dict[str, str]:
-    if not config.MERGE_API_KEY or not config.MERGE_ACCOUNT_TOKEN:
-        raise RuntimeError("MERGE_API_KEY and MERGE_ACCOUNT_TOKEN are required")
+    if not config.MERGE_API_KEY or not config.MERGE_FILESTORAGE_ACCOUNT_TOKEN:
+        raise RuntimeError(
+            "MERGE_API_KEY and MERGE_FILESTORAGE_ACCOUNT_TOKEN are required"
+        )
     return {
         "Authorization": f"Bearer {config.MERGE_API_KEY}",
-        "X-Account-Token": config.MERGE_ACCOUNT_TOKEN,
+        "X-Account-Token": config.MERGE_FILESTORAGE_ACCOUNT_TOKEN,
     }
 
 

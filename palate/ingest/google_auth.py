@@ -67,6 +67,7 @@ def credentials() -> Credentials:
     # 4. Always persist the latest token/refresh state.
     token_path.parent.mkdir(parents=True, exist_ok=True)
     token_path.write_text(creds.to_json(), encoding="utf-8")
+    token_path.chmod(0o600)
 
     return creds
 

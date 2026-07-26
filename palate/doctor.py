@@ -36,9 +36,17 @@ def main() -> int:
         not missing_packages,
         "installed" if not missing_packages else "missing: " + ", ".join(missing_packages),
     )
-    _row("Node bridge", bool(shutil.which("node") and shutil.which("npm")), "node + npm")
+    node_ready = bool(shutil.which("node") and shutil.which("npm"))
+    _row("Node runtime", node_ready, "node + npm")
+    bridge_packages = (
+        config.ROOT
+        / "palate/chat/bridge/node_modules/@spectrum-ts/core/package.json"
+    ).is_file()
+    _row("Photon bridge packages", bridge_packages, "palate/chat/bridge/node_modules")
     _row("Database", config.DB_PATH.exists(), str(config.DB_PATH))
     _row("Static submission", (config.ROOT / "web/index.html").exists(), "web/index.html")
+    site_packages = (config.ROOT / "node_modules/vinext/package.json").is_file()
+    _row("Submission packages", site_packages, "root node_modules")
 
     gateway = bool(config.MERGE_GATEWAY_BASE_URL and config.MERGE_GATEWAY_API_KEY)
     direct = bool(config.LLM_DIRECT and config.ANTHROPIC_API_KEY)
@@ -51,8 +59,14 @@ def main() -> int:
     _row("Google inbox/calendar", google_ready, str(google_secret))
     _row("Google Places", bool(config.GOOGLE_PLACES_API_KEY), "API key")
 
-    merge_ready = bool(config.MERGE_API_KEY and config.MERGE_ACCOUNT_TOKEN)
-    _row("Merge enrichment", merge_ready, "API key + account token")
+    merge_files_ready = bool(
+        config.MERGE_API_KEY and config.MERGE_FILESTORAGE_ACCOUNT_TOKEN
+    )
+    merge_kb_ready = bool(
+        config.MERGE_API_KEY and config.MERGE_KNOWLEDGEBASE_ACCOUNT_TOKEN
+    )
+    _row("Merge File Storage", merge_files_ready, "API key + File Storage token")
+    _row("Merge Knowledge Base", merge_kb_ready, "API key + Knowledge Base token")
 
     spectrum_project = os.environ.get("SPECTRUM_PROJECT_ID")
     spectrum_secret = os.environ.get("SPECTRUM_PROJECT_SECRET")
@@ -74,7 +88,8 @@ def main() -> int:
             ("model route", llm_ready),
             ("Google inbox/calendar", google_ready),
             ("Google Places", bool(config.GOOGLE_PLACES_API_KEY)),
-            ("Merge enrichment", merge_ready),
+            ("Merge File Storage", merge_files_ready),
+            ("Merge Knowledge Base", merge_kb_ready),
             ("Spectrum outbound", spectrum_send),
             ("Spectrum webhook", bool(config.PHOTON_WEBHOOK_SECRET)),
             ("phone recording", recording.is_file()),

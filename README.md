@@ -80,6 +80,9 @@ python -m palate profile.evidence cancellation_threshold
 
 # Optional Merge enrichment
 python -m palate enrich.exchange <merge-link-public-token>
+# Save each returned token under its matching category in .env:
+# MERGE_KNOWLEDGEBASE_ACCOUNT_TOKEN=... (Notion)
+# MERGE_FILESTORAGE_ACCOUNT_TOKEN=...  (Drive)
 python -m palate enrich.notion
 python -m palate enrich.drive 200
 

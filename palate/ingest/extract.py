@@ -53,8 +53,13 @@ BODY:
 
 
 def _mark_extracted(rows) -> None:
+    """Retain only audit metadata after extracting; discard private message text."""
     db.executemany(
-        "UPDATE raw_message SET extracted = 1 WHERE id = ?",
+        """
+        UPDATE raw_message
+        SET extracted = 1, sender = NULL, subject = NULL, body = NULL
+        WHERE id = ?
+        """,
         [(row["id"],) for row in rows],
     )
 

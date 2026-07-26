@@ -39,10 +39,14 @@ def run(limit: int | None = None) -> dict[str, int]:
             conn.execute(
                 """
                 UPDATE raw_message
-                SET matched_vendor = ?
+                SET matched_vendor = ?,
+                    extracted = CASE WHEN ? IS NULL THEN 1 ELSE extracted END,
+                    sender = CASE WHEN ? IS NULL THEN NULL ELSE sender END,
+                    subject = CASE WHEN ? IS NULL THEN NULL ELSE subject END,
+                    body = CASE WHEN ? IS NULL THEN NULL ELSE body END
                 WHERE id = ?
                 """,
-                (vendor, row["id"]),
+                (vendor, vendor, vendor, vendor, vendor, row["id"]),
             )
 
             if vendor is not None:

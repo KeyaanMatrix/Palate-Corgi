@@ -1,7 +1,7 @@
 import handler from "vinext/server/app-router-entry";
 
 interface Env {
-  ASSETS: Fetcher;
+  ASSETS?: Fetcher;
 }
 
 interface ExecutionContext {
@@ -18,7 +18,12 @@ const worker = {
     const url = new URL(request.url);
     if (url.pathname === "/") {
       url.pathname = "/submission.html";
-      return env.ASSETS.fetch(new Request(url, request));
+      if (env?.ASSETS) {
+        return env.ASSETS.fetch(new Request(url, request));
+      }
+      // `vinext start` runs the Worker without Cloudflare bindings. Redirect
+      // through its built-in public-file handler for a faithful local preview.
+      return Response.redirect(url, 302);
     }
     return handler.fetch(request, env, ctx);
   },

@@ -68,8 +68,14 @@ def run_sync(months_back: int = 24) -> int:
 
                 ON CONFLICT(id) DO UPDATE SET
                     source = excluded.source,
-                    subject = excluded.subject,
-                    body = excluded.body,
+                    subject = CASE
+                        WHEN raw_message.extracted = 0 THEN excluded.subject
+                        ELSE NULL
+                    END,
+                    body = CASE
+                        WHEN raw_message.extracted = 0 THEN excluded.body
+                        ELSE NULL
+                    END,
                     received_at = excluded.received_at,
                     matched_vendor = excluded.matched_vendor,
                     fetched_at = excluded.fetched_at

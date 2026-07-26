@@ -7,12 +7,17 @@ B computes the gap; you just have to land the rows.
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Iterable
+from urllib.parse import urlparse
+
+import httpx
 
 from palate import config, contracts, db
 
 _BASE = "https://api.merge.dev/api/knowledgebase/v1"
+_MAX_ARTICLE_BYTES = 5_000_000
 _LIST_WORDS = (
     "restaurant",
     "restaurants",
@@ -28,11 +33,13 @@ _BULLET = re.compile(r"^\s*(?:[-*•]|\d+[.)]|\[[ xX]\])\s+(.+?)\s*$")
 
 
 def _headers() -> dict[str, str]:
-    if not config.MERGE_API_KEY or not config.MERGE_ACCOUNT_TOKEN:
-        raise RuntimeError("MERGE_API_KEY and MERGE_ACCOUNT_TOKEN are required")
+    if not config.MERGE_API_KEY or not config.MERGE_KNOWLEDGEBASE_ACCOUNT_TOKEN:
+        raise RuntimeError(
+            "MERGE_API_KEY and MERGE_KNOWLEDGEBASE_ACCOUNT_TOKEN are required"
+        )
     return {
         "Authorization": f"Bearer {config.MERGE_API_KEY}",
-        "X-Account-Token": config.MERGE_ACCOUNT_TOKEN,
+        "X-Account-Token": config.MERGE_KNOWLEDGEBASE_ACCOUNT_TOKEN,
         "Accept": "application/json",
     }
 
@@ -81,9 +88,30 @@ def _items(article: dict) -> list[str]:
     return list(dict.fromkeys(found))
 
 
-def _pages() -> Iterable[dict]:
-    import httpx
+def _download_content(article: dict) -> object | None:
+    """Download Merge's presigned article body without leaking Merge headers."""
+    value = article.get("article_content_download_url")
+    if not isinstance(value, str) or not value.strip():
+        return None
+    parsed = urlparse(value)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise ValueError("article content URL must be an absolute HTTPS URL")
 
+    response = httpx.get(value, timeout=30.0, follow_redirects=False)
+    response.raise_for_status()
+    content = response.content
+    if len(content) > _MAX_ARTICLE_BYTES:
+        raise ValueError("article content exceeds the 5 MB safety limit")
+    if not content:
+        return None
+
+    try:
+        return json.loads(content)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return content.decode("utf-8", errors="replace")
+
+
+def _pages() -> Iterable[dict]:
     cursor = None
     with httpx.Client(headers=_headers(), timeout=30.0) as client:
         while True:
@@ -109,6 +137,13 @@ def sync() -> int:
         article_id = str(article.get("id") or article.get("remote_id") or "")
         if not article_id:
             continue
+        try:
+            content = _download_content(article)
+        except (httpx.HTTPError, ValueError):
+            # One stale presigned URL should not discard every other list.
+            continue
+        if content is not None:
+            article = {**article, "content": content}
         created_at = str(
             article.get("modified_at") or article.get("created_at") or db.now()
         )[:16]

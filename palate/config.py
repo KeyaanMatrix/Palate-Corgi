@@ -25,7 +25,13 @@ def get(name: str, default: str = "") -> str:
     return os.environ.get(name, default)
 
 
-DB_PATH = ROOT / get("PALATE_DB", "./palate.db").lstrip("./")
+def resolve_path(value: str) -> Path:
+    """Resolve a configured path without corrupting absolute paths."""
+    candidate = Path(value).expanduser()
+    return candidate if candidate.is_absolute() else ROOT / candidate
+
+
+DB_PATH = resolve_path(get("PALATE_DB", "./palate.db"))
 SCHEMA_PATH = ROOT / "schema.sql"
 SEED_PATH = ROOT / "seed" / "seed.sql"
 
@@ -39,6 +45,12 @@ MERGE_GATEWAY_API_KEY = get("MERGE_GATEWAY_API_KEY")
 
 MERGE_API_KEY = get("MERGE_API_KEY")
 MERGE_ACCOUNT_TOKEN = get("MERGE_ACCOUNT_TOKEN")
+MERGE_FILESTORAGE_ACCOUNT_TOKEN = (
+    get("MERGE_FILESTORAGE_ACCOUNT_TOKEN") or MERGE_ACCOUNT_TOKEN
+)
+MERGE_KNOWLEDGEBASE_ACCOUNT_TOKEN = (
+    get("MERGE_KNOWLEDGEBASE_ACCOUNT_TOKEN") or MERGE_ACCOUNT_TOKEN
+)
 
 GOOGLE_CLIENT_SECRETS = get("GOOGLE_CLIENT_SECRETS", "./client_secret.json")
 GOOGLE_TOKEN_PATH = get("GOOGLE_TOKEN_PATH", "./.google_token.json")

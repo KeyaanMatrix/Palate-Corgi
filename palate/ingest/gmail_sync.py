@@ -204,9 +204,18 @@ def run_sync(limit: int = 500, since: str = "2y") -> int:
 
                 ON CONFLICT(id) DO UPDATE SET
                     source      = excluded.source,
-                    sender      = excluded.sender,
-                    subject     = excluded.subject,
-                    body        = excluded.body,
+                    sender      = CASE
+                        WHEN raw_message.extracted = 0 THEN excluded.sender
+                        ELSE NULL
+                    END,
+                    subject     = CASE
+                        WHEN raw_message.extracted = 0 THEN excluded.subject
+                        ELSE NULL
+                    END,
+                    body        = CASE
+                        WHEN raw_message.extracted = 0 THEN excluded.body
+                        ELSE NULL
+                    END,
                     received_at = excluded.received_at,
                     fetched_at  = excluded.fetched_at
                 """,

@@ -14,7 +14,7 @@ from palate import config, contracts, db
 from palate.chat import photon, session
 from palate.chat import replan as chat_replan
 from palate.enrich import knowledge_base
-from palate.ingest import extract
+from palate.ingest import extract, gmail_sync, prefilter
 from palate.plan import candidates, places
 from palate.plan.assemble import build_itinerary, replan, swap_stop
 from palate.profile.build import build_profile
@@ -241,6 +241,75 @@ class IngestTests(DatabaseCase):
         self.assertEqual(row["source"], "calendar")
         self.assertIsNone(row["vendor"])
         self.assertEqual(row["is_travel"], 1)
+        raw = db.one(
+            "SELECT extracted,sender,subject,body FROM raw_message"
+            " WHERE id='calendar:event-1'"
+        )
+        self.assertEqual(raw["extracted"], 1)
+        self.assertIsNone(raw["sender"])
+        self.assertIsNone(raw["subject"])
+        self.assertIsNone(raw["body"])
+
+    def test_prefilter_discards_unmatched_private_text(self) -> None:
+        db.execute(
+            "INSERT INTO raw_message"
+            " (id,source,sender,subject,body,received_at,extracted,fetched_at)"
+            " VALUES (?,?,?,?,?,?,0,?)",
+            (
+                "personal-1",
+                "gmail",
+                "friend@example.com",
+                "Weekend plans",
+                "Private conversation",
+                db.now(),
+                db.now(),
+            ),
+        )
+        self.assertEqual(prefilter.run(), {})
+        row = db.one(
+            "SELECT extracted,sender,subject,body FROM raw_message"
+            " WHERE id='personal-1'"
+        )
+        self.assertEqual(row["extracted"], 1)
+        self.assertIsNone(row["sender"])
+        self.assertIsNone(row["subject"])
+        self.assertIsNone(row["body"])
+
+    def test_gmail_resync_does_not_restore_discarded_text(self) -> None:
+        db.execute(
+            "INSERT INTO raw_message"
+            " (id,source,received_at,extracted,fetched_at)"
+            " VALUES (?,?,?,?,?)",
+            ("message-1", "gmail", db.now(), 1, db.now()),
+        )
+        api = mock.MagicMock()
+        api.list.return_value.execute.return_value = {
+            "messages": [{"id": "message-1"}]
+        }
+        api.get.return_value.execute.return_value = {
+            "id": "message-1",
+            "internalDate": "1785000000000",
+            "payload": {
+                "mimeType": "text/plain",
+                "headers": [
+                    {"name": "From", "value": "updates@resy.com"},
+                    {"name": "Subject", "value": "Your booking"},
+                ],
+                "body": {"data": "U2Vuc2l0aXZlIGJvZHk="},
+            },
+        }
+        service = mock.MagicMock()
+        service.users.return_value.messages.return_value = api
+        with mock.patch.object(gmail_sync, "gmail_service", return_value=service):
+            self.assertEqual(gmail_sync.run_sync(limit=1), 1)
+        row = db.one(
+            "SELECT extracted,sender,subject,body FROM raw_message"
+            " WHERE id='message-1'"
+        )
+        self.assertEqual(row["extracted"], 1)
+        self.assertIsNone(row["sender"])
+        self.assertIsNone(row["subject"])
+        self.assertIsNone(row["body"])
 
     def test_dedupe_keeps_cancellation_and_fills_richer_fields(self) -> None:
         base = {
@@ -362,7 +431,7 @@ class ChatTests(DatabaseCase):
         self.assertIn(session.stop_for_message(phone, "new-message"), updated_ids)
 
 
-class EnrichmentTests(unittest.TestCase):
+class EnrichmentTests(DatabaseCase):
     def test_only_restaurant_shaped_lists_clear_precision_gate(self) -> None:
         content = "\n".join(f"- Place {index}" for index in range(1, 6))
         self.assertEqual(
@@ -376,6 +445,56 @@ class EnrichmentTests(unittest.TestCase):
         self.assertEqual(
             knowledge_base._items({"title": "Work tasks", "content": content}),
             [],
+        )
+
+    def test_notion_article_body_is_downloaded_without_merge_headers(self) -> None:
+        content = "\n".join(f"- Place {index}" for index in range(1, 6))
+        response = mock.Mock()
+        response.content = json.dumps({"blocks": [{"text": content}]}).encode()
+        response.raise_for_status.return_value = None
+        with mock.patch.object(
+            knowledge_base.httpx, "get", return_value=response
+        ) as request:
+            downloaded = knowledge_base._download_content(
+                {
+                    "article_content_download_url": (
+                        "https://example-bucket.s3.amazonaws.com/article?signature=x"
+                    )
+                }
+            )
+        self.assertEqual(downloaded, {"blocks": [{"text": content}]})
+        _, kwargs = request.call_args
+        self.assertNotIn("headers", kwargs)
+        self.assertFalse(kwargs["follow_redirects"])
+
+    def test_notion_sync_hydrates_article_and_writes_intent_rows(self) -> None:
+        content = "\n".join(f"- Place {index}" for index in range(1, 6))
+        article = {
+            "id": "article-1",
+            "title": "Restaurants to try",
+            "article_content_download_url": "https://example.com/article",
+            "created_at": "2026-07-26T10:00:00Z",
+        }
+        with (
+            mock.patch.object(knowledge_base, "_pages", return_value=[article]),
+            mock.patch.object(
+                knowledge_base, "_download_content", return_value=content
+            ),
+        ):
+            self.assertEqual(knowledge_base.sync(), 5)
+        self.assertEqual(
+            db.one("SELECT COUNT(*) AS n FROM visit WHERE intent_only=1")["n"],
+            5,
+        )
+
+
+class ConfigTests(unittest.TestCase):
+    def test_configured_paths_preserve_absolute_values(self) -> None:
+        absolute = Path(tempfile.gettempdir()) / "palate-absolute.db"
+        self.assertEqual(config.resolve_path(str(absolute)), absolute)
+        self.assertEqual(
+            config.resolve_path("data/palate.db"),
+            config.ROOT / "data/palate.db",
         )
 
 
