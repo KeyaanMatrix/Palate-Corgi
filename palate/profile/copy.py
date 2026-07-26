@@ -247,7 +247,11 @@ def render_profile_copy(profile: dict) -> list[str]:
     nothing, or survives the number check with too little left, this falls back
     to it rather than putting thin copy on stage.
     """
-    from palate import llm  # deferred: see the import note at the top of this file
+    try:  # deferred: see the import note at the top of this file
+        from palate import llm
+    except ImportError as exc:  # no SDK installed — that is what the template is for
+        print(f"copy: model path unavailable ({exc}); rendering the template instead")
+        return render_plain(profile)
 
     facts = json.dumps(profile, indent=2, sort_keys=True)
     prompt = f"{PROMPT_RULES}\nStatistics:\n{facts}\n"
