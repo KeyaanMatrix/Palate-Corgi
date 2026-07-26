@@ -1,0 +1,2 @@
+# Owner B — profile. Deliberately empty: profile math is pure SQL + stdlib
+# statistics (TRD section 1). If you are about to add pandas, don't.

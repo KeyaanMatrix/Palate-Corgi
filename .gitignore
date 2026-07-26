@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+palate.db
+palate.db-wal
+palate.db-shm
+client_secret.json
+.google_token.json
+submission/
+.DS_Store

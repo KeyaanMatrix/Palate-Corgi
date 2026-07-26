@@ -1,0 +1,3 @@
+# Owner D — Merge Gateway, Merge Unified API, Google Places
+# (httpx from base covers Merge + Places; add an SDK here only if you use one.)
+pillow>=10.3          # Drive EXIF extraction

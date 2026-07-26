@@ -1,0 +1,4 @@
+# FROZEN at the base commit. Nobody edits this file.
+# Owner-specific deps go in requirements/<your-letter>.txt.
+anthropic>=0.70
+httpx>=0.27
