@@ -5,6 +5,7 @@ it, so it can never be a merge conflict. Keep 'check' working: `make check`
 runs it before every push, and a broken check blocks the whole team's merge.
 """
 
+
 def check(args) -> None:
     from .vendors import classify
 
@@ -24,6 +25,7 @@ def check(args) -> None:
 
     print(f"ingest.check OK ({len(cases)} fixtures)")
 
+
 def sync(args) -> None:
     from .gmail_sync import run_sync
 
@@ -31,18 +33,29 @@ def sync(args) -> None:
     count = run_sync(limit)
     print(f"{count} messages")
 
+
 def filter_messages(args) -> None:
     from . import prefilter
 
     limit = int(args[0]) if args else None
     print(prefilter.run(limit))
 
+
 def extract(args) -> None:
-    from .extract import extract_pending
+    from .extract import dedupe_visits, extract_pending
 
     batch_size = int(args[0]) if args else 20
     count = extract_pending(batch_size)
-    print(f"{count} visits")
+    removed = dedupe_visits()
+    print(f"{count} visits, {removed} duplicate rows collapsed")
+
+
+def dedupe(args) -> None:
+    from .extract import dedupe_visits
+
+    hours = int(args[0]) if args else 3
+    print(f"{dedupe_visits(hours)} duplicate rows collapsed")
+
 
 def calendar(args) -> None:
     from .calendar_sync import run_sync
@@ -51,10 +64,12 @@ def calendar(args) -> None:
     count = run_sync(months)
     print(f"{count} calendar events")
 
+
 COMMANDS = {
     "sync": sync,
     "calendar": calendar,
     "filter": filter_messages,
     "extract": extract,
+    "dedupe": dedupe,
     "check": check,
 }

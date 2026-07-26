@@ -5,6 +5,8 @@ __pycache__/
 palate.db
 palate.db-wal
 palate.db-shm
+palate.check.db*
+palate.demo.db*
 client_secret.json
 .google_token.json
 submission/
@@ -12,3 +14,9 @@ submission/
 node_modules/
 .vercel/
 node_modules/
+.next/
+dist/
+.wrangler/
+public/submission.html
+public/palate-social-v2.png
+public/demo.mp4

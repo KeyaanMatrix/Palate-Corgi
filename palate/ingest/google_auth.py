@@ -9,7 +9,6 @@ from googleapiclient.discovery import build
 
 from palate import config
 
-
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/calendar.readonly",

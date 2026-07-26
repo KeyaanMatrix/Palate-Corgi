@@ -1,137 +1,943 @@
 <!doctype html>
-<!-- Submission permalink. OWNER C, built AFTER the 4:00 AM freeze.
-     Static, single file, no backend, no framework (PRD section 10).
-     Deploy: npx vercel --prod   (credit code V0-CORGIMERGE30) -->
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Palate</title>
-<style>
-  :root {
-    --ink: #1a1814;
-    --paper: #f7f3eb;
-    --muted: #5c564c;
-    --line: #d9d0c2;
-    --accent: #0b3d2e;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    color: var(--ink);
-    background:
-      radial-gradient(1200px 600px at 10% -10%, #efe6d4 0%, transparent 55%),
-      radial-gradient(900px 500px at 100% 0%, #e4efe8 0%, transparent 50%),
-      var(--paper);
-    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
-    line-height: 1.45;
-  }
-  main {
-    max-width: 40rem;
-    margin: 0 auto;
-    padding: 2.5rem 1.25rem 4rem;
-  }
-  h1 {
-    font-size: clamp(1.75rem, 5vw, 2.35rem);
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    line-height: 1.15;
-    margin: 0 0 2rem;
-  }
-  h2 {
-    font-family: ui-sans-serif, system-ui, sans-serif;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin: 2.25rem 0 0.75rem;
-  }
-  .profile {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .profile li {
-    padding: 0.55rem 0;
-    border-bottom: 1px solid var(--line);
-    font-size: 1.05rem;
-  }
-  .video-wrap {
-    margin-top: 0.5rem;
-    background: #0f0e0c;
-    aspect-ratio: 9 / 16;
-    max-height: 70vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-  video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    background: #0f0e0c;
-  }
-  .claims {
-    margin: 0;
-    padding-left: 1.1rem;
-  }
-  .claims li {
-    margin: 0.4rem 0;
-    font-size: 1rem;
-  }
-  .note {
-    margin-top: 1rem;
-    color: var(--muted);
-    font-size: 0.95rem;
-  }
-  .brand {
-    font-family: ui-sans-serif, system-ui, sans-serif;
-    font-size: 0.75rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin: 0 0 1rem;
-  }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#120d12">
+  <meta name="description" content="Palate turns the reservations and cancellations already in your inbox into a taste graph—and a trip that feels like yours.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Palate — travel shaped by your revealed taste">
+  <meta property="og:description" content="TripAdvisor tells you what strangers liked. This knows what you liked.">
+  <meta property="og:image" content="palate-social-v2.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Palate — travel shaped by your revealed taste">
+  <meta name="twitter:description" content="TripAdvisor tells you what strangers liked. This knows what you liked.">
+  <meta name="twitter:image" content="palate-social-v2.png">
+  <title>Palate — your taste, remembered</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #120d12;
+      --panel: #1b131b;
+      --panel-2: #241824;
+      --cream: #f4ebdc;
+      --muted: #b7a99e;
+      --line: rgba(244, 235, 220, 0.14);
+      --coral: #ff5b45;
+      --green: #c8ff4a;
+      --blue: #2377ff;
+      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--cream);
+      background:
+        radial-gradient(circle at 86% 5%, rgba(255, 91, 69, 0.14), transparent 29rem),
+        radial-gradient(circle at 6% 34%, rgba(200, 255, 74, 0.07), transparent 27rem),
+        var(--ink);
+      font-family: var(--sans);
+      line-height: 1.5;
+    }
+
+    body::before {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.035;
+      content: "";
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
+    }
+
+    a {
+      color: inherit;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .shell {
+      width: min(1180px, calc(100% - 40px));
+      margin-inline: auto;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 78px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .wordmark {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: 1.35rem;
+      font-style: italic;
+      letter-spacing: -0.03em;
+    }
+
+    .status {
+      display: flex;
+      gap: 0.55rem;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .status::before {
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 99px;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(200, 255, 74, 0.75);
+      content: "";
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.55fr);
+      gap: clamp(3rem, 8vw, 8rem);
+      align-items: end;
+      min-height: min(780px, calc(100vh - 78px));
+      padding: clamp(5rem, 12vh, 9rem) 0 clamp(5rem, 10vh, 8rem);
+    }
+
+    .eyebrow,
+    .section-no,
+    .mini-label {
+      margin: 0;
+      color: var(--green);
+      font-size: 0.69rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 920px;
+      margin: 1.3rem 0 1.8rem;
+      font-family: var(--serif);
+      font-size: clamp(3.5rem, 8.4vw, 8.4rem);
+      font-weight: 400;
+      letter-spacing: -0.067em;
+      line-height: 0.9;
+    }
+
+    h1 em {
+      color: var(--coral);
+      font-weight: 400;
+    }
+
+    .hero-copy {
+      max-width: 41rem;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(1.05rem, 2vw, 1.35rem);
+      line-height: 1.55;
+    }
+
+    .hero-proof {
+      align-self: end;
+      padding: 1.5rem 0 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .hero-proof p {
+      margin: 0.75rem 0 0;
+      color: var(--cream);
+      font-family: var(--serif);
+      font-size: clamp(1.45rem, 3vw, 2.15rem);
+      line-height: 1.12;
+    }
+
+    .hero-proof span {
+      display: block;
+      margin-top: 1rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.55;
+    }
+
+    .section {
+      padding: clamp(5.5rem, 12vw, 10rem) 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: 8rem minmax(0, 1fr);
+      gap: 2rem;
+      margin-bottom: clamp(3.5rem, 7vw, 6.5rem);
+    }
+
+    h2 {
+      max-width: 860px;
+      margin: -0.25rem 0 0;
+      font-family: var(--serif);
+      font-size: clamp(2.4rem, 5.6vw, 5.4rem);
+      font-weight: 400;
+      letter-spacing: -0.055em;
+      line-height: 0.98;
+    }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(240px, 0.35fr);
+      gap: clamp(3rem, 8vw, 7.5rem);
+    }
+
+    .profile-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: truths;
+    }
+
+    .profile-list li {
+      display: grid;
+      grid-template-columns: 2.4rem 1fr;
+      gap: 1rem;
+      padding: 1.25rem 0;
+      border-bottom: 1px solid var(--line);
+      counter-increment: truths;
+      font-family: var(--serif);
+      font-size: clamp(1.25rem, 2.35vw, 2rem);
+      letter-spacing: -0.025em;
+      line-height: 1.18;
+    }
+
+    .profile-list li::before {
+      padding-top: 0.25rem;
+      color: var(--coral);
+      content: "0" counter(truths);
+      font-family: var(--sans);
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+    }
+
+    .evidence {
+      position: sticky;
+      top: 2rem;
+      align-self: start;
+      padding: 1.35rem;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      background: linear-gradient(145deg, rgba(255, 91, 69, 0.09), rgba(200, 255, 74, 0.025));
+    }
+
+    .evidence strong {
+      display: block;
+      margin: 1rem 0 0.45rem;
+      font-family: var(--serif);
+      font-size: 3.4rem;
+      font-weight: 400;
+      letter-spacing: -0.07em;
+      line-height: 1;
+    }
+
+    .evidence p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.55;
+    }
+
+    .evidence hr {
+      margin: 1.5rem 0;
+      border: 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: minmax(250px, 0.55fr) minmax(320px, 0.72fr);
+      gap: clamp(2.5rem, 7vw, 7rem);
+      align-items: center;
+    }
+
+    .stage-copy h3 {
+      min-height: 2.35em;
+      margin: 1rem 0;
+      font-family: var(--serif);
+      font-size: clamp(2rem, 4vw, 3.7rem);
+      font-weight: 400;
+      letter-spacing: -0.045em;
+      line-height: 1.03;
+    }
+
+    .stage-copy > p {
+      min-height: 4.7em;
+      max-width: 30rem;
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.65;
+    }
+
+    .stage-nav {
+      display: grid;
+      gap: 0.5rem;
+      margin-top: 2.5rem;
+    }
+
+    .stage-button {
+      display: grid;
+      grid-template-columns: 1.8rem 1fr;
+      gap: 0.8rem;
+      width: 100%;
+      padding: 0.85rem 0;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+      transition: color 180ms ease;
+    }
+
+    .stage-button::before {
+      content: attr(data-index);
+      color: inherit;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+    }
+
+    .stage-button:hover,
+    .stage-button[aria-pressed="true"] {
+      color: var(--cream);
+    }
+
+    .stage-button[aria-pressed="true"]::before {
+      color: var(--green);
+    }
+
+    .phone-wrap {
+      position: relative;
+      width: min(100%, 420px);
+      margin-inline: auto;
+    }
+
+    .phone-wrap::before {
+      position: absolute;
+      z-index: -1;
+      inset: 12% -18%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 91, 69, 0.21), transparent 68%);
+      filter: blur(24px);
+      content: "";
+    }
+
+    .phone {
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 3.2rem;
+      background: #050505;
+      box-shadow: 0 40px 90px rgba(0, 0, 0, 0.48);
+    }
+
+    .screen {
+      position: relative;
+      min-height: 710px;
+      overflow: hidden;
+      border-radius: 2.5rem;
+      color: #111;
+      background: #f7f7f6;
+    }
+
+    .dynamic-island {
+      position: absolute;
+      z-index: 2;
+      top: 12px;
+      left: 50%;
+      width: 104px;
+      height: 27px;
+      transform: translateX(-50%);
+      border-radius: 20px;
+      background: #050505;
+    }
+
+    .imessage-head {
+      padding: 3.5rem 1rem 0.75rem;
+      border-bottom: 1px solid #ddd;
+      text-align: center;
+    }
+
+    .avatar {
+      display: grid;
+      width: 2.35rem;
+      height: 2.35rem;
+      margin: 0 auto 0.35rem;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--cream);
+      background: var(--ink);
+      font-family: var(--serif);
+      font-size: 1rem;
+      font-style: italic;
+    }
+
+    .contact {
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .messages {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-height: 540px;
+      max-height: 540px;
+      padding: 1rem 0.7rem 2.2rem;
+      overflow: hidden;
+    }
+
+    .bubble {
+      position: relative;
+      max-width: 87%;
+      padding: 0.72rem 0.82rem;
+      border-radius: 1.15rem;
+      background: #e5e5ea;
+      font-size: 0.78rem;
+      line-height: 1.36;
+      white-space: pre-line;
+      animation: rise 280ms both;
+    }
+
+    .bubble.me {
+      align-self: flex-end;
+      color: white;
+      background: var(--blue);
+    }
+
+    .bubble.palate {
+      align-self: flex-start;
+    }
+
+    .bubble.alert {
+      border: 1px solid rgba(255, 91, 69, 0.4);
+      background: #fff1ed;
+    }
+
+    .reaction {
+      position: absolute;
+      right: -0.35rem;
+      bottom: -0.62rem;
+      padding: 0.08rem 0.25rem;
+      border: 2px solid white;
+      border-radius: 1rem;
+      background: #f2f2f4;
+      font-size: 0.66rem;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.13);
+    }
+
+    .typing {
+      display: flex;
+      gap: 4px;
+      width: fit-content;
+      padding: 0.7rem 0.85rem;
+      border-radius: 1.1rem;
+      background: #e5e5ea;
+    }
+
+    .typing i {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #8d8d93;
+      animation: blink 1s infinite;
+    }
+
+    .typing i:nth-child(2) {
+      animation-delay: 160ms;
+    }
+
+    .typing i:nth-child(3) {
+      animation-delay: 320ms;
+    }
+
+    .recording {
+      margin-top: 4rem;
+      padding-top: 3rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .recording video {
+      display: block;
+      width: min(100%, 880px);
+      max-height: 72vh;
+      margin: 1rem auto 0;
+      background: #050505;
+    }
+
+    .claims {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }
+
+    .claim {
+      min-height: 300px;
+      padding: clamp(1.4rem, 3vw, 2.3rem);
+      background: var(--ink);
+    }
+
+    .claim b {
+      display: grid;
+      width: 2.5rem;
+      height: 2.5rem;
+      margin-bottom: 4.5rem;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--ink);
+      background: var(--green);
+      font-size: 0.72rem;
+    }
+
+    .claim h3 {
+      margin: 0 0 0.8rem;
+      font-family: var(--serif);
+      font-size: 1.65rem;
+      font-weight: 400;
+      letter-spacing: -0.03em;
+      line-height: 1.08;
+    }
+
+    .claim p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.6;
+    }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(7, auto);
+      gap: 0.65rem;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4rem;
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .pipeline i {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--coral);
+    }
+
+    .honesty {
+      display: grid;
+      grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+      gap: clamp(2rem, 8vw, 8rem);
+      align-items: start;
+    }
+
+    .honesty h2 {
+      color: var(--coral);
+    }
+
+    .honesty-copy {
+      padding-top: 0.4rem;
+    }
+
+    .honesty-copy p {
+      margin: 0 0 1.5rem;
+      color: var(--muted);
+      font-size: clamp(1rem, 1.8vw, 1.2rem);
+      line-height: 1.7;
+    }
+
+    .honesty-copy strong {
+      color: var(--cream);
+      font-weight: 650;
+    }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 2rem;
+      padding: 2rem 0 3.2rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+    }
+
+    @keyframes blink {
+      0%, 60%, 100% { opacity: 0.35; }
+      30% { opacity: 1; }
+    }
+
+    @media (max-width: 780px) {
+      .shell {
+        width: min(100% - 28px, 680px);
+      }
+
+      .hero,
+      .profile-grid,
+      .demo-grid,
+      .honesty {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        min-height: auto;
+        gap: 4rem;
+      }
+
+      .section-head {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      .evidence {
+        position: static;
+      }
+
+      .claims {
+        grid-template-columns: 1fr;
+      }
+
+      .claim {
+        min-height: auto;
+      }
+
+      .claim b {
+        margin-bottom: 2.5rem;
+      }
+
+      .pipeline {
+        grid-template-columns: 1fr;
+        justify-items: start;
+      }
+
+      .pipeline i {
+        margin-left: 0.2rem;
+      }
+
+      .screen {
+        min-height: 650px;
+      }
+
+      .messages {
+        min-height: 480px;
+        max-height: 480px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+      }
+    }
+  </style>
 </head>
 <body>
-<main>
-  <p class="brand">Palate</p>
-  <h1>TripAdvisor tells you what strangers liked. This knows what you liked.</h1>
+  <header class="shell nav">
+    <p class="wordmark">Palate</p>
+    <div class="status">Taste graph online</div>
+  </header>
 
-  <h2>Profile</h2>
-  <ul class="profile">
-    <li>Earliest out: 11:00 — fifth percentile of your booked hours.</li>
-    <li>Peak dinner: 8pm on Tue/Wed, party of two.</li>
-    <li>Price ceiling: $$$; cancel rate spikes above that band.</li>
-    <li>Seat: bar/counter — 19 of 27 dinners where seat is known.</li>
-    <li>Revisit ratio 1.9 — low novelty appetite, high repeats.</li>
-    <li>Aspiration gap: Bar Mario saved, never booked.</li>
-  </ul>
+  <main>
+    <section class="shell hero" aria-labelledby="hero-title">
+      <div>
+        <p class="eyebrow">Your taste, remembered</p>
+        <h1 id="hero-title">TripAdvisor tells you what strangers <em>liked.</em> This knows what you liked.</h1>
+        <p class="hero-copy">
+          Palate turns the reservations, cancellations, calendar entries, and saved lists
+          you already made into a taste graph—then plans the version of a city that behaves like you.
+        </p>
+      </div>
+      <aside class="hero-proof" aria-label="Product principle">
+        <p>No survey.<br>No star ratings.<br>No generic top ten.</p>
+        <span>Revealed behavior beats declared preference. Distaste is a signal, too.</span>
+      </aside>
+    </section>
 
-  <h2>Demo</h2>
-  <div class="video-wrap">
-    <!-- Drop the 60s screen recording here as demo.mp4 (or update the src). -->
-    <video controls playsinline poster="" src="demo.mp4">
-      Your browser can’t play this video. Open demo.mp4 beside this page.
-    </video>
-  </div>
+    <section class="section" aria-labelledby="profile-title">
+      <div class="shell">
+        <header class="section-head">
+          <p class="section-no">01 / Profile</p>
+          <h2 id="profile-title">A travel product that notices.</h2>
+        </header>
+        <div class="profile-grid">
+          <ol class="profile-list">
+            <li>You book Wednesdays, almost always in the 8pm hour — 11 of 19 dining bookings.</li>
+            <li>Parties of 2. 25 of 27 reservations.</li>
+            <li>You go back. 22 visits across 13 places — 15 of them to the same 6.</li>
+            <li>You have never scheduled anything before 11am. Not once in 21 completed visits.</li>
+            <li>You cancel at the top of your price range. 4 of 5 bookings at band 4.</li>
+            <li>You sit at the bar. Every one of 2 solo reservations was a bar seat.</li>
+            <li>You saved 3 places to a list. You have been to none of them.</li>
+          </ol>
+          <aside class="evidence">
+            <p class="mini-label">Evidence, not vibes</p>
+            <strong>30</strong>
+            <p>fixture visits exercise confirmations, repeats, cancellations, seats, and saved intent.</p>
+            <hr>
+            <p>Each rendered number ships with its source numerator, denominator, and note. A line with no evidence does not render.</p>
+          </aside>
+        </div>
+      </div>
+    </section>
 
-  <h2>How it works</h2>
-  <ol class="claims">
-    <li>Taste profile is pure SQL over your real bookings — every number traces to a row count.</li>
-    <li>iMessage tapbacks are the control surface: 👎 swaps one stop; the rest of the day stays put.</li>
-    <li>Mid-trip state (“it’s raining”) re-plans from now forward without rewriting locked stops.</li>
-  </ol>
+    <section class="section" aria-labelledby="demo-title">
+      <div class="shell">
+        <header class="section-head">
+          <p class="section-no">02 / Interface</p>
+          <h2 id="demo-title">No app to open. Just the thread you’re already in.</h2>
+        </header>
 
-  <h2>What’s real</h2>
-  <p class="note">
-    Profile metrics and visit rows are sourced from the presenter’s inbox where the pipeline completed;
-    city candidates and a few swap alternatives may be seeded so the live demo cannot die on venue wifi.
-    The iMessage thread, tapback swap, and keyword re-plan are the real product path.
-  </p>
-</main>
+        <div class="demo-grid">
+          <div class="stage-copy" aria-live="polite">
+            <p class="mini-label" id="stage-label">Profile reveal</p>
+            <h3 id="stage-title">It starts by saying something true.</h3>
+            <p id="stage-description">The profile arrives as output, not onboarding. Every count traces to stored visit rows.</p>
+            <div class="stage-nav" aria-label="Demo scenes">
+              <button class="stage-button" type="button" data-stage="0" data-index="01" aria-pressed="true">Reveal the taste profile</button>
+              <button class="stage-button" type="button" data-stage="1" data-index="02" aria-pressed="false">Build the Lisbon that fits</button>
+              <button class="stage-button" type="button" data-stage="2" data-index="03" aria-pressed="false">Tap back to swap one stop</button>
+              <button class="stage-button" type="button" data-stage="3" data-index="04" aria-pressed="false">Text what changed</button>
+            </div>
+          </div>
+
+          <div class="phone-wrap" aria-label="Self-running product demonstration">
+            <div class="phone">
+              <div class="screen">
+                <div class="dynamic-island" aria-hidden="true"></div>
+                <div class="imessage-head">
+                  <div class="avatar">P</div>
+                  <div class="contact">Palate</div>
+                </div>
+                <div class="messages" id="messages"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="recording" id="recording" hidden>
+          <p class="mini-label">Phone capture / 60 seconds</p>
+          <video id="demo-video" controls playsinline preload="metadata">
+            Your browser cannot play the product recording.
+          </video>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="systems-title">
+      <div class="shell">
+        <header class="section-head">
+          <p class="section-no">03 / System</p>
+          <h2 id="systems-title">The restraint is the intelligence.</h2>
+        </header>
+
+        <div class="claims">
+          <article class="claim">
+            <b>01</b>
+            <h3>Transactional history becomes revealed taste.</h3>
+            <p>Sender-scoped Gmail and Calendar extraction produces normalized visits. Source-counted SQL—not a model—computes every profile metric.</p>
+          </article>
+          <article class="claim">
+            <b>02</b>
+            <h3>Aversion filters run before venue ranking.</h3>
+            <p>Cancellation bands, one-and-done cuisines, and saved-never-visited categories cannot sneak back in through popularity.</p>
+          </article>
+          <article class="claim">
+            <b>03</b>
+            <h3>One gateway controls every model call.</h3>
+            <p>Extraction and rationale generation share a Merge Gateway wrapper; direct-provider mode is isolated as an explicit emergency fallback.</p>
+          </article>
+        </div>
+
+        <div class="pipeline" aria-label="Product data flow">
+          <span>Inbox + calendar</span><i></i>
+          <span>Visit ledger</span><i></i>
+          <span>Taste graph</span><i></i>
+          <span>iMessage plan</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="honesty-title">
+      <div class="shell honesty">
+        <h2 id="honesty-title">What’s real.<br>What’s seeded.</h2>
+        <div class="honesty-copy">
+          <p><strong>Real product code:</strong> Google OAuth and sender-scoped ingest, structured extraction, source-backed SQL metrics, pre-ranking distaste filters, Places caching, Merge enrichment, persisted iMessage message-to-stop mapping, tapback swaps, and keyword re-planning.</p>
+          <p><strong>Seeded in this page:</strong> the seven profile lines above come from the repository’s 30-row deterministic fixture until the presenter completes OAuth. Lisbon includes an offline candidate pool so venue Wi‑Fi cannot kill the plan. The negative recommendation is transparent about using review count only to identify what to skip—never what to rank.</p>
+          <p><strong>Connection seam:</strong> a real phone capture and outbound messages require Spectrum/Photon project credentials and a sending number. Drop that capture at <code>web/demo.mp4</code> and this page reveals it automatically; the interactive sequence above remains the honest local proof.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="shell">
+    <span>Palate / Corgi × Merge × Photon</span>
+    <span>Built for the overnight</span>
+  </footer>
+
+  <script>
+    const frames = [
+      {
+        label: "Profile reveal",
+        title: "It starts by saying something true.",
+        description: "The profile arrives as output, not onboarding. Every count traces to stored visit rows.",
+        messages: [
+          { side: "palate", text: "You book Wednesdays, almost always in the 8pm hour — 11 of 19 dining bookings." },
+          { side: "palate", text: "You go back. 22 visits across 13 places — 15 of them to the same 6." },
+          { side: "palate", text: "You cancel at the top of your price range. 4 of 5 bookings at band 4." },
+          { side: "palate", text: "You saved 3 places to a list. You have been to none of them." }
+        ]
+      },
+      {
+        label: "A city, made personal",
+        title: "The itinerary proves the profile.",
+        description: "Places supplies the pool. Your repeat patterns, price ceiling, timing, and aversions decide what survives.",
+        messages: [
+          { side: "me", text: "plan Lisbon" },
+          { side: "alert", text: "Skip Pastéis de Belém\n\nIt is the most-reviewed restaurant in the pool. Popularity alone does not explain your 22 visits across 13 places." },
+          { side: "palate", text: "12:30pm · Cervejaria Ramiro\n\nYou went back to Cotogna 4 times. Seafood appears in your repeat-weighted dining history." },
+          { side: "palate", text: "8:45pm · A Cevicheria\n\nThe one deliberate stretch: beyond your strongest pattern, but still inside your price ceiling and usual dinner window." }
+        ]
+      },
+      {
+        label: "Tapback as control surface",
+        title: "One reaction. One stop changes.",
+        description: "Each stop is its own message. The message ID maps to one persisted stop ID, so the rest of the day stays byte-for-byte intact.",
+        messages: [
+          { side: "palate", text: "12:30pm · Cervejaria Ramiro\n\nYou went back to Cotogna 4 times. Seafood appears in your repeat-weighted dining history." },
+          { side: "palate", text: "8:45pm · A Cevicheria\n\nThe one deliberate stretch.", reaction: "👎" },
+          { side: "palate", text: "8:45pm · Prado\n\nYou went back to Cotogna 4 times. Price band 3 stays inside your ceiling of 4." }
+        ]
+      },
+      {
+        label: "State, not chat",
+        title: "When the day breaks, the plan bends.",
+        description: "“Raining” is matched before any model call. Only future, unlocked stops are rewritten; the selected venue and time survive when indoor routing is enough.",
+        messages: [
+          { side: "me", text: "it’s raining" },
+          { side: "palate", text: "8:45pm · Prado\n\nRain plan: use indoor seating and the direct route; the time stays put. You went back to Cotogna 4 times." },
+          { side: "palate", text: "Locked stops and anything already behind you stay exactly where they were." }
+        ]
+      }
+    ];
+
+    const messages = document.querySelector("#messages");
+    const label = document.querySelector("#stage-label");
+    const title = document.querySelector("#stage-title");
+    const description = document.querySelector("#stage-description");
+    const buttons = [...document.querySelectorAll("[data-stage]")];
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let active = 0;
+    let timer = null;
+
+    function renderFrame(index) {
+      active = index;
+      const frame = frames[index];
+      label.textContent = frame.label;
+      title.textContent = frame.title;
+      description.textContent = frame.description;
+      messages.replaceChildren();
+
+      frame.messages.forEach((message, messageIndex) => {
+        const bubble = document.createElement("div");
+        bubble.className = `bubble ${message.side}`;
+        bubble.textContent = message.text;
+        bubble.style.animationDelay = `${messageIndex * 70}ms`;
+        if (message.reaction) {
+          const reaction = document.createElement("span");
+          reaction.className = "reaction";
+          reaction.textContent = message.reaction;
+          bubble.append(reaction);
+        }
+        messages.append(bubble);
+      });
+
+      const typing = document.createElement("div");
+      typing.className = "typing";
+      typing.setAttribute("aria-hidden", "true");
+      typing.innerHTML = "<i></i><i></i><i></i>";
+      messages.append(typing);
+
+      buttons.forEach((button, buttonIndex) => {
+        button.setAttribute("aria-pressed", String(buttonIndex === index));
+      });
+    }
+
+    function startAutoplay() {
+      if (reducedMotion) return;
+      window.clearInterval(timer);
+      timer = window.setInterval(() => renderFrame((active + 1) % frames.length), 5600);
+    }
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        renderFrame(Number(button.dataset.stage));
+        startAutoplay();
+      });
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        window.clearInterval(timer);
+      } else {
+        startAutoplay();
+      }
+    });
+
+    renderFrame(0);
+    startAutoplay();
+
+    fetch("./demo.mp4", { method: "HEAD" })
+      .then((response) => {
+        if (!response.ok) return;
+        const recording = document.querySelector("#recording");
+        const video = document.querySelector("#demo-video");
+        video.src = "./demo.mp4";
+        recording.hidden = false;
+      })
+      .catch(() => {});
+  </script>
 </body>
 </html>

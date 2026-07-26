@@ -12,7 +12,6 @@ from palate import db
 from .google_auth import gmail_service
 from .vendors import QUERY_FRAGMENT
 
-
 BODY_LIMIT = 4000
 
 

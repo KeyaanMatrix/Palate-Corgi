@@ -6,8 +6,8 @@
  *      PHOTON_BRIDGE_PORT (default 8787)
  */
 import http from "node:http";
-import { Spectrum } from "spectrum-ts";
-import { imessage } from "spectrum-ts/providers/imessage";
+import { Spectrum } from "@spectrum-ts/core";
+import { imessage } from "@spectrum-ts/imessage";
 
 const PORT = Number(process.env.PHOTON_BRIDGE_PORT || 8787);
 const BIND = "127.0.0.1";

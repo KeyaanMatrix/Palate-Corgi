@@ -9,6 +9,7 @@ import sys
 import time
 from pathlib import Path
 
+from palate import contracts
 from palate.chat import photon
 from palate.chat.replan import send_full_itinerary
 
@@ -144,9 +145,72 @@ def demo(args) -> None:
     print(f"sent {len(ids)} messages")
 
 
+def preview(args) -> None:
+    """Print the real chat flow without requiring Photon credentials."""
+    from palate.chat import format as fmt
+    from palate.chat.plan_api import build_itinerary, replan, swap_stop
+    from palate.chat.replan import _load_profile, _load_profile_lines
+
+    city = args[0].strip() if args else "Lisbon"
+    try:
+        days = int(args[1]) if len(args) > 1 else 1
+    except ValueError as exc:
+        raise SystemExit("usage: python -m palate chat.preview [city] [days]") from exc
+
+    itinerary = build_itinerary(_load_profile(), city, days=days)
+    lines = _load_profile_lines()
+    if lines:
+        print("PROFILE")
+        print(fmt.format_profile(lines))
+
+    negative = itinerary.get("negative_recommendation")
+    if negative:
+        print("\nNEGATIVE RECOMMENDATION")
+        print(fmt.format_negative(negative))
+
+    print("\nITINERARY")
+    for day_index, day in enumerate(itinerary.get("days") or []):
+        print(day.get("date") or f"Day {day_index + 1}")
+        for stop in day.get("stops") or []:
+            print(fmt.format_stop(stop, day_index))
+
+    before_stops = [stop for _, stop in contracts.iter_stops(itinerary)]
+    if before_stops:
+        target = before_stops[-1]
+        swapped = swap_stop(itinerary, target["id"], reason="preview_tapback")
+        previous_ids = {stop["id"] for stop in before_stops}
+        replacement = next(
+            (
+                stop
+                for _, stop in contracts.iter_stops(swapped)
+                if stop["id"] not in previous_ids
+            ),
+            None,
+        )
+        if replacement:
+            print("\nTAPBACK 👎 — ONLY THIS STOP CHANGES")
+            print(fmt.format_stop(replacement, 0))
+
+        cutoff = f"{swapped['days'][0]['date']}T00:00"
+        rain = replan(swapped, cutoff, "it's raining")
+        prior = {
+            stop["id"]: stop for _, stop in contracts.iter_stops(swapped)
+        }
+        changed = [
+            stop
+            for _, stop in contracts.iter_stops(rain)
+            if prior.get(stop["id"]) != stop
+        ]
+        if changed:
+            print("\nTEXT: IT'S RAINING — FUTURE UNLOCKED STOPS ONLY")
+            for stop in changed:
+                print(fmt.format_stop(stop, 0))
+
+
 COMMANDS = {
     "serve": serve,
     "send": send_cmd,
     "demo": demo,
+    "preview": preview,
     "check": check,
 }

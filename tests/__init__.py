@@ -1,0 +1,1 @@
+"""Palate integration tests."""

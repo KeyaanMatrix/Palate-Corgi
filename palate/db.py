@@ -8,8 +8,24 @@ from typing import Any, Iterable
 from . import config
 
 
+class Connection(sqlite3.Connection):
+    """Transaction context manager that also closes the file descriptor.
+
+    sqlite3.Connection.__exit__ commits or rolls back but, unlike most resource
+    context managers, does not close. Every Palate call is short-lived, so
+    leaving those handles to the garbage collector leaks descriptors during a
+    large inbox backfill.
+    """
+
+    def __exit__(self, exc_type, exc, traceback):
+        try:
+            return super().__exit__(exc_type, exc, traceback)
+        finally:
+            self.close()
+
+
 def connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(config.DB_PATH)
+    conn = sqlite3.connect(config.DB_PATH, factory=Connection)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")

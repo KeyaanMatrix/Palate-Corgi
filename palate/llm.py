@@ -22,6 +22,14 @@ _client: anthropic.Anthropic | None = None
 _route: str = "direct"
 
 
+def _configured_route() -> str:
+    return (
+        "gateway"
+        if config.MERGE_GATEWAY_BASE_URL and not config.LLM_DIRECT
+        else "direct"
+    )
+
+
 def client() -> anthropic.Anthropic:
     """Anthropic SDK pointed at Merge Gateway, or straight at Anthropic.
 
@@ -46,8 +54,9 @@ def client() -> anthropic.Anthropic:
 
 
 def route() -> str:
-    client()
-    return _route
+    # Reporting the configured path must work before credentials are present;
+    # otherwise `llm.route` cannot help diagnose setup.
+    return _route if _client is not None else _configured_route()
 
 
 def _call(
@@ -73,7 +82,9 @@ def _call(
         with client().messages.stream(**kwargs) as stream:
             response = stream.get_final_message()
     except Exception as exc:  # noqa: BLE001 - log and let the caller drop the batch
-        db.log_llm_call(purpose, config.LLM_MODEL, route(), ok=False, error=str(exc)[:400])
+        db.log_llm_call(
+            purpose, config.LLM_MODEL, route(), ok=False, error=str(exc)[:400]
+        )
         raise
 
     db.log_llm_call(

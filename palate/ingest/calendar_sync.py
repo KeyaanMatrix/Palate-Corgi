@@ -61,15 +61,17 @@ def run_sync(months_back: int = 24) -> int:
                     subject,
                     body,
                     received_at,
+                    matched_vendor,
                     fetched_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 
                 ON CONFLICT(id) DO UPDATE SET
                     source = excluded.source,
                     subject = excluded.subject,
                     body = excluded.body,
                     received_at = excluded.received_at,
+                    matched_vendor = excluded.matched_vendor,
                     fetched_at = excluded.fetched_at
                 """,
                 (
@@ -79,6 +81,7 @@ def run_sync(months_back: int = 24) -> int:
                     summary,
                     body,
                     start_value,
+                    "calendar",
                     datetime.now(timezone.utc).isoformat(),
                 ),
             )

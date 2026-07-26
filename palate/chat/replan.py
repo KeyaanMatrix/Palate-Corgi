@@ -12,7 +12,8 @@ import re
 from palate import contracts, db
 from palate.chat import format as fmt
 from palate.chat import photon, session
-from palate.chat.plan_api import build_itinerary, replan as plan_replan, swap_stop
+from palate.chat.plan_api import build_itinerary, swap_stop
+from palate.chat.plan_api import replan as plan_replan
 
 STATE_PATTERNS = {
     "weather": ["raining", "rain", "storm", "pouring"],
@@ -60,19 +61,14 @@ def _load_profile() -> dict:
 
 def _load_profile_lines() -> list[str]:
     try:
-        from palate.profile.copy import render_lines  # type: ignore
+        from palate.profile.build import load_profile
+        from palate.profile.copy import render_plain
 
-        lines = render_lines()
-        if isinstance(lines, list) and lines:
-            return [str(x) for x in lines]
-    except Exception:
-        pass
-    try:
-        from palate.profile.build import load_profile  # type: ignore
-
-        p = load_profile()
-        if isinstance(p, dict) and p.get("copy_lines"):
-            return list(p["copy_lines"])
+        profile = load_profile()
+        if isinstance(profile, dict) and profile:
+            lines = render_plain(profile)
+            if lines:
+                return [str(x) for x in lines]
     except Exception:
         pass
     return []
