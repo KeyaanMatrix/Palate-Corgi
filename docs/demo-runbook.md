@@ -76,9 +76,12 @@ Verify these by hand:
 - **Tunnel went stale:** restart the tunnel, update the Spectrum webhook URL,
   and send one inbound text before going on stage.
 
-## Recording the submission clip
+## Replacing the seeded walkthrough with a live phone capture
 
-Record a single vertical phone screen capture, under 60 seconds:
+`web/demo.mp4` contains a clearly disclosed 32-second walkthrough of the
+working seeded interface. Once Spectrum credentials and the sending number are
+available, replace it with a single vertical phone screen capture under 60
+seconds:
 
 1. Start on the profile message.
 2. Send `plan Lisbon`.
