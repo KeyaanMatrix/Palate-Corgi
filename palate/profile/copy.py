@@ -3,10 +3,11 @@
 Build render_plain FIRST — it is the wifi-outage fallback and it forces you to
 check that every line has a number behind it.
 
-The number check in this file is the reason nothing false gets read aloud:
-every numeral in a rendered line has to appear in the profile dict. It guards
-the model's output, and it guards the template's output too — the template is
-hand-written, which is exactly the kind of code that drifts from the data.
+The number check in this file is the reason nothing false gets read aloud: a
+rendered line survives only if every number in it — written as digits, spelled
+out as words, hedged or bare — appears in the profile dict. It guards the
+model's output, and it guards the template's output too, because a
+hand-written template is exactly the kind of code that drifts from the data.
 """
 
 import json
@@ -43,15 +44,15 @@ _WORD_VALUE = {
     "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70,
     "eighty": 80, "ninety": 90,
 }
+# "one" is deliberately absent from the table above: in this copy it is almost
+# always a pronoun ("every one of the 2 solo reservations"), and treating it as
+# a claim would fail lines that are perfectly well sourced.
 _MULTIPLIER = {"dozen": 12, "hundred": 100}
 _HEDGE = re.compile(
     r"\b(about|around|roughly|nearly|approximately|almost|some|over|under"
     r"|at least|more than|less than|fewer than|upwards of)\s+([\w.]+)",
     re.IGNORECASE,
 )
-# "one" is deliberately absent: in this copy it is almost always a pronoun
-# ("every one of the 2 solo reservations"), and treating it as a claim would
-# make the check fail on lines that are perfectly well sourced.
 
 # Keys whose value is an hour of the day. "8pm" is a faithful rendering of 20,
 # so the 12-hour form counts as sourced — the only derivation allowed here.
@@ -131,11 +132,14 @@ def _hedged_numbers(line: str) -> list[str]:
     return hedged
 
 
-def unsourced_numbers(line: str, profile: dict) -> list[str]:
-    """The numbers in `line` the profile cannot account for. Empty is good."""
-    allowed = sourced_numbers(profile)
+def _unsourced(line: str, allowed: set[str]) -> list[str]:
     found = _NUMBER.findall(line) + _spelled_numbers(line)
     return [t for t in found if _canon(t) not in allowed] + _hedged_numbers(line)
+
+
+def unsourced_numbers(line: str, profile: dict) -> list[str]:
+    """The numbers in `line` the profile cannot account for. Empty is good."""
+    return _unsourced(line, sourced_numbers(profile))
 
 
 def verify(lines: list[str], profile: dict) -> tuple[list[str], list[str]]:
@@ -145,9 +149,10 @@ def verify(lines: list[str], profile: dict) -> tuple[list[str], list[str]]:
     dozen" the line is gone; there is no version of this that negotiates with
     a number it cannot trace.
     """
+    allowed = sourced_numbers(profile)  # serialize the profile once, not per line
     keeps, drops = [], []
     for line in lines:
-        (drops if unsourced_numbers(line, profile) else keeps).append(line)
+        (drops if _unsourced(line, allowed) else keeps).append(line)
     return keeps, drops
 
 
@@ -158,83 +163,104 @@ def _fmt_hour(hour: int) -> str:
     return f"{hour % 12 or 12}{'am' if hour < 12 else 'pm'}"
 
 
+def _plural(count: int, noun: str) -> str:
+    """"1 visit", "22 visits". A line that says "1 visits" is a line nobody
+    trusts the rest of, and these get read out loud."""
+    return f"{count} {noun}{'' if count == 1 else 's'}"
+
+
 def render_plain(profile: dict) -> list[str]:
-    """Deterministic template. No model, no network. Build this one first."""
+    """Deterministic template. No model, no network. Build this one first.
+
+    Every line is gated on both its value and its counts being present. A line
+    we cannot source is not softened or padded — it is not rendered. That is
+    also why this is not an f-string over the whole dict: on thin data most of
+    these have to disappear cleanly.
+    """
     ev = profile.get("evidence") or {}
-
-    def e(key: str, field: str, default=None):
-        return (ev.get(key) or {}).get(field, default)
-
     lines: list[str] = []
 
-    days = profile.get("preferred_days") or []
+    def counts(key: str) -> tuple[int | None, int | None]:
+        entry = ev.get(key) or {}
+        return entry.get("n"), entry.get("of")
+
+    def support(key: str) -> str | None:
+        """"11 of 19", or None when the evidence is missing."""
+        n, of = counts(key)
+        return None if n is None or of is None else f"{n} of {of}"
+
     hour = profile.get("peak_dining_hour")
-    if days and hour is not None:
-        named = " and ".join(_DAY_WORDS.get(d, d) for d in days)
-        lines.append(
-            f"You book {named}, almost always in the {_fmt_hour(hour)} hour —"
-            f" {e('peak_dining_hour', 'n')} of {e('peak_dining_hour', 'of')} dining bookings."
-        )
-    elif hour is not None:
-        lines.append(
-            f"You eat in the {_fmt_hour(hour)} hour — {e('peak_dining_hour', 'n')} of"
-            f" {e('peak_dining_hour', 'of')} dining bookings."
-        )
+    dining = support("peak_dining_hour")
+    if hour is not None and dining:
+        days = profile.get("preferred_days") or []
+        if days:
+            named = " and ".join(_DAY_WORDS.get(d, d) for d in days)
+            lines.append(
+                f"You book {named}, almost always in the {_fmt_hour(hour)} hour —"
+                f" {dining} dining bookings."
+            )
+        else:
+            lines.append(f"You eat in the {_fmt_hour(hour)} hour — {dining} dining bookings.")
 
     party = profile.get("typical_party_size")
-    if party is not None:
-        lines.append(
-            f"Parties of {party}. {e('typical_party_size', 'n')} of"
-            f" {e('typical_party_size', 'of')} reservations."
-        )
+    party_support = support("typical_party_size")
+    if party is not None and party_support:
+        lines.append(f"Parties of {party}. {party_support} reservations.")
 
+    # Gated on repeat places existing, not on the ratio being truthy: with one
+    # visit to one place the ratio is 1.0 and "you go back" is simply false.
     repeats = profile.get("most_repeated") or []
-    if profile.get("revisit_ratio"):
-        line = f"You go back. {e('revisit_ratio', 'n')} visits across {e('revisit_ratio', 'of')} places"
-        if repeats:
-            line += f" — {e('most_repeated', 'n')} of them to the same {len(repeats)}"
+    visits, places = counts("revisit_ratio")
+    if repeats and visits is not None and places is not None:
+        line = f"You go back. {_plural(visits, 'visit')} across {_plural(places, 'place')}"
+        concentrated, _ = counts("most_repeated")
+        if concentrated is not None:
+            line += f" — {concentrated} of them to the same {len(repeats)}"
         lines.append(line + ".")
 
     floor = profile.get("earliest_activity_hour")
-    if floor is not None:
+    _, completed = counts("earliest_activity_hour")
+    if floor is not None and completed:
         lines.append(
             f"You have never scheduled anything before {_fmt_hour(floor)}."
-            f" Not once in {e('earliest_activity_hour', 'of')} completed visits."
+            f" Not once in {_plural(completed, 'completed visit')}."
         )
 
     band = profile.get("cancellation_threshold")
-    if band is not None:
+    cancels = support("cancellation_threshold")
+    if band is not None and cancels:
         lines.append(
-            f"You cancel at the top of your price range. {e('cancellation_threshold', 'n')} of"
-            f" {e('cancellation_threshold', 'of')} bookings at band {band}."
+            f"You cancel at the top of your price range. {cancels} bookings at band {band}."
         )
 
     seat = profile.get("seat_preference")
     if seat is not None:
-        note = e("seat_preference", "note", "") or ""
+        note = (ev.get("seat_preference") or {}).get("note") or ""
+        seated = support("seat_preference")
         if note.startswith("every"):
             # The scoped version — "every solo reservation was a bar seat" — is
             # the line people remember, so it is used verbatim when it holds.
             lines.append(f"You sit at the {seat}. {note[0].upper()}{note[1:]}.")
-        else:
-            lines.append(
-                f"You sit at the {seat} — {e('seat_preference', 'n')} of"
-                f" {e('seat_preference', 'of')} reservations with a seat on record."
-            )
+        elif seated:
+            lines.append(f"You sit at the {seat} — {seated} reservations with a seat on record.")
 
     saves = profile.get("aspiration_gap") or []
     if saves:
-        lines.append(f"You saved {len(saves)} places to a list. You have been to none of them.")
+        lines.append(
+            f"You saved {_plural(len(saves), 'place')} to a list."
+            " You have been to none of them."
+        )
 
     aversions = profile.get("cuisine_aversion") or []
     if aversions:
-        lines.append(
-            f"You tried {' and '.join(aversions)} once and never went back."
-        )
+        lines.append(f"You tried {' and '.join(aversions)} once and never went back.")
 
     lead = profile.get("booking_lead_time_median_days")
-    if lead is not None:
-        lines.append(f"You book {lead} days ahead, across {e('booking_lead_time_median_days', 'n')} reservations.")
+    booked, _ = counts("booking_lead_time_median_days")
+    if lead is not None and booked:
+        lines.append(
+            f"You book {_plural(lead, 'day')} ahead, across {_plural(booked, 'reservation')}."
+        )
 
     return lines[:MAX_LINES]
 

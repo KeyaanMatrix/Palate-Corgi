@@ -171,12 +171,18 @@ _EXPLAIN: dict[str, tuple[str, str]] = {
         " SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) cancelled,"
         " SUM(intent_only) saved FROM visit GROUP BY category ORDER BY rows DESC",
     ),
+    # A CTE rather than a correlated subquery: REAL and HAPPENED name columns
+    # without a table prefix, and inside a subquery they would bind to whichever
+    # table the reader has to work out. Here they apply to one table, plainly.
     "aspiration_gap": (
         "saved places, and whether a completed visit matches the name",
-        "SELECT s.place_name_raw saved, s.city, s.created_at saved_at,"
-        " (SELECT COUNT(*) FROM visit v WHERE LOWER(TRIM(v.place_name_raw))"
-        f"   = LOWER(TRIM(s.place_name_raw)) AND {REAL} AND {HAPPENED}) visits"
-        " FROM visit s WHERE s.intent_only = 1 ORDER BY s.place_name_raw",
+        "WITH completed AS ("
+        "  SELECT LOWER(TRIM(place_name_raw)) name, COUNT(*) visits FROM visit"
+        f"  WHERE {REAL} AND {HAPPENED} GROUP BY name)"
+        " SELECT s.place_name_raw saved, s.city, s.created_at saved_at,"
+        " COALESCE(c.visits, 0) visits FROM visit s"
+        " LEFT JOIN completed c ON c.name = LOWER(TRIM(s.place_name_raw))"
+        " WHERE s.intent_only = 1 ORDER BY s.place_name_raw",
     ),
 }
 

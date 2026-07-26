@@ -38,12 +38,30 @@ def _norm(name: str | None) -> str:
     return re.sub(r"[^a-z0-9]+", " ", (name or "").lower()).strip()
 
 
+def _city(value: str | None) -> str:
+    """Match key for a city name. Real rows carry 'San Francisco', 'san francisco'
+    and 'San  Francisco' for the same place; compared raw, they read as three
+    cities and every same-city guard below quietly stops counting."""
+    return re.sub(r"\s+", " ", (value or "").strip().lower())
+
+
 def _tags(raw: str | None) -> list[str]:
-    """cuisine is a JSON array in the column. Bad JSON means no tags, not a crash."""
+    """cuisine is a JSON array in the column. Bad JSON means no tags, not a crash.
+
+    Deduplicated: extraction can emit ["sushi", "Sushi"], and a repeated tag
+    would make one visit look like two — which is enough to disqualify a
+    cuisine from "tried exactly once" and lose the aversion entirely.
+    """
     try:
-        return [str(t).lower().strip() for t in (json.loads(raw) or []) if str(t).strip()]
+        parsed = json.loads(raw) or []
     except (json.JSONDecodeError, TypeError):
         return []
+    seen: dict[str, None] = {}
+    for tag in parsed:
+        cleaned = str(tag).lower().strip()
+        if cleaned:
+            seen.setdefault(cleaned)
+    return list(seen)
 
 
 def _visited_names() -> set[str]:
@@ -128,6 +146,7 @@ def cuisine_aversion(min_alternatives: int = 3) -> tuple[list[str], dict]:
         entry = {
             "place": r["place"],
             "city": r["city"],
+            "city_key": _city(r["city"]),
             "when": r["scheduled_at"],
             "tags": set(tags),
         }
@@ -148,16 +167,19 @@ def cuisine_aversion(min_alternatives: int = 3) -> tuple[list[str], dict]:
             e
             for e in tagged
             if e["when"] > trial["when"]
-            and (e["city"] or "") == (trial["city"] or "")
+            and e["city_key"] == trial["city_key"]
             and tag not in e["tags"]
         ]
         others = {t for e in since for t in e["tags"] if t != tag}
         if len(since) < min_alternatives or len(others) < MIN_N_AVERSION:
             continue
         aversions.append(tag)
+        # Whitespace-collapsed for display only. Case is left alone: "SF" is not
+        # something to title-case, and this note gets read out loud as written.
+        where = " ".join((trial["city"] or "").split()) or "the same city"
         notes.append(
             f"{tag}: one visit ({trial['place']}, {trial['when'][:10]}), {len(since)}"
-            f" later dining bookings in {trial['city'] or 'the same city'}, never went back"
+            f" later dining bookings in {where}, never went back"
         )
 
     return aversions, {

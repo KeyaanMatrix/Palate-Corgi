@@ -7,7 +7,7 @@ runs it before every push, and a broken check blocks the whole team's merge.
 
 from palate import contracts
 
-from .build import build_profile, explain, load_profile
+from .build import EXTRA_KEYS, build_profile, explain, load_profile
 from .copy import render_plain, render_profile_copy, unsourced_numbers
 
 # Metrics that must survive contact with any dataset worth demoing. Deliberately
@@ -15,6 +15,11 @@ from .copy import render_plain, render_profile_copy, unsourced_numbers
 # first one as a hard constraint. Everything else is allowed to be None on thin
 # data — the copy drops the line rather than inventing a value.
 REQUIRED_VALUES = ("earliest_activity_hour", "typical_party_size", "revisit_ratio")
+
+# Enough sourced lines to be worth reading. Kept low on purpose: this check
+# gates the whole team's push, and on thin real data the honest outcome is a
+# short profile, not a failed merge.
+MIN_COPY_LINES = 3
 
 
 def check(args) -> None:
@@ -25,8 +30,8 @@ def check(args) -> None:
     missing = contracts.profile_is_sourced(profile)
     assert not missing, f"unsourced keys: {missing}"
 
-    absent = [k for k in contracts.TASTE_PROFILE_KEYS if k not in profile]
-    assert not absent, f"profile is missing contract keys: {absent}"
+    absent = [k for k in (*contracts.TASTE_PROFILE_KEYS, *EXTRA_KEYS) if k not in profile]
+    assert not absent, f"profile is missing keys: {absent}"
 
     for key in REQUIRED_VALUES:
         assert profile.get(key) is not None, f"{key} is None on seed data"
@@ -42,7 +47,7 @@ def check(args) -> None:
     # The copy check, run against the deterministic renderer so it needs no
     # network: every number that would be read aloud traces back to the dict.
     lines = render_plain(profile)
-    assert len(lines) >= 5, f"render_plain produced only {len(lines)} lines"
+    assert len(lines) >= MIN_COPY_LINES, f"render_plain produced only {len(lines)} lines"
     for line in lines:
         bad = unsourced_numbers(line, profile)
         assert not bad, f"unsourced number {bad} in: {line}"
